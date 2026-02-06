@@ -1,0 +1,117 @@
+spring:
+  application:
+    name: zhibo-backend
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/zhibo?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:123456}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      connection-timeout: ${DB_POOL_TIMEOUT:30000}
+      idle-timeout: ${DB_POOL_IDLE_TIMEOUT:600000}
+      max-lifetime: ${DB_POOL_MAX_LIFETIME:1800000}
+
+  sql:
+    init:
+      mode: never
+      schema-locations: classpath:sql/init.sql
+      encoding: utf-8
+
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST:localhost}
+      port: ${SPRING_REDIS_PORT:6379}
+      password: ${SPRING_REDIS_PASSWORD:}
+      database: ${SPRING_REDIS_DATABASE:0}
+      lettuce:
+        pool:
+          max-active: ${REDIS_POOL_MAX_ACTIVE:20}
+          max-idle: ${REDIS_POOL_MAX_IDLE:10}
+          min-idle: ${REDIS_POOL_MIN_IDLE:5}
+
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
+    virtual-host: ${SPRING_RABBITMQ_VHOST:/}
+
+  elasticsearch:
+    uris: ${SPRING_ELASTICSEARCH_URIS:http://localhost:9200}
+    username: ${SPRING_ELASTICSEARCH_USERNAME:}
+    password: ${SPRING_ELASTICSEARCH_PASSWORD:}
+    socket-timeout: ${ES_SOCKET_TIMEOUT:30s}
+    connect-timeout: ${ES_CONNECT_TIMEOUT:10s}
+
+  servlet:
+    multipart:
+      max-file-size: ${UPLOAD_MAX_FILE_SIZE:10MB}
+      max-request-size: ${UPLOAD_MAX_REQUEST_SIZE:20MB}
+      enabled: true
+
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  type-aliases-package: com.zhibo.backend.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: assign-id
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+server:
+  port: ${SERVER_PORT:8081}
+  servlet:
+    context-path: ${SERVER_CONTEXT_PATH:/api}
+    session:
+      timeout: ${SESSION_TIMEOUT:30m}
+  tomcat:
+    threads:
+      max: ${TOMCAT_MAX_THREADS:200}
+      min-spare: ${TOMCAT_MIN_SPARE:10}
+    connection-timeout: ${TOMCAT_CONNECTION_TIMEOUT:20s}
+    max-http-form-post-size: ${TOMCAT_MAX_POST_SIZE:2MB}
+
+jwt:
+  secret: ${JWT_SECRET:zhibo-secret-key-2026-change-in-production}
+  expiration: ${JWT_EXPIRATION:86400000}
+  header: ${JWT_HEADER:Authorization}
+  prefix: ${JWT_PREFIX:Bearer }
+
+stream:
+  rtmp:
+    server: ${STREAM_RTMP_SERVER:rtmp://localhost:1935/live}
+  hls:
+    server: ${STREAM_HLS_SERVER:http://localhost:8080/hls}
+  ffmpeg:
+    path: ${STREAM_FFMPEG_PATH:ffmpeg}
+  storage:
+    path: ${STREAM_STORAGE_PATH:./stream}
+
+logging:
+  level:
+    root: ${LOG_LEVEL_ROOT:INFO}
+    com.zhibo.backend: ${LOG_LEVEL_ZHIBO:DEBUG}
+    com.zhibo.backend.mapper: ${LOG_LEVEL_MAPPER:DEBUG}
+  pattern:
+    console: ${LOG_PATTERN_CONSOLE:%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n}
+    file: ${LOG_PATTERN_FILE:%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n}
+  file:
+    name: ${LOG_FILE_PATH:logs/zhibo.log}
+    max-size: ${LOG_FILE_MAX_SIZE:10MB}
+    max-history: ${LOG_FILE_MAX_HISTORY:30}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always

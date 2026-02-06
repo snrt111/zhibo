@@ -1,0 +1,81 @@
+# 日志文件
+logs/
+*.log
+
+# IDE配置
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Trae AI配置
+.trae/
+
+# 后端 - Java/Maven
+backend/target/
+backend/.mvn/
+backend/mvnw.cmd
+backend/mvnw
+backend/*.jar
+backend/*.war
+backend/*.ear
+backend/pom.xml.tag
+backend/pom.xml.releaseBackup
+backend/release.properties
+backend/dependency-reduced-pom.xml
+
+# 前端 - Node.js
+frontend/node_modules/
+frontend/dist/
+frontend/.npm
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+frontend/.pnpm-debug.log*
+frontend/*.local
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+frontend/.DS_Store
+
+# Docker
+stream/
+*.pid
+*.seed
+*.pid.lock
+
+# 数据库
+*.sql.backup
+mysql-data/
+
+# 操作系统
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# 临时文件
+*.tmp
+*.temp
+.cache/
+
+# 环境变量文件
+.env
+.env.*.local
+
+# 构建产物
+build/
+out/
+
+# 测试覆盖率
+coverage/
+*.lcov
+.nyc_output
+
+# 依赖锁文件（可选，根据团队约定决定是否提交）
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
