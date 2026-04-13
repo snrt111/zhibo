@@ -8,6 +8,10 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [vue()],
     
+    define: {
+      global: 'globalThis',
+    },
+    
     resolve: {
       alias: {
         '@': resolve(__dirname, 'src'),
@@ -35,10 +39,15 @@ export default defineConfig(({ mode }) => {
           rewrite: (path) => path,
         },
         '/ws': {
-          target: env.VITE_WS_BASE_URL || 'ws://localhost:8081',
+          target: env.VITE_WS_BASE_URL || 'ws://localhost:8081/api',
           changeOrigin: true,
           secure: false,
           ws: true,
+        },
+        '/hls': {
+          target: 'http://localhost:8080',
+          changeOrigin: true,
+          secure: false,
         },
       },
     },

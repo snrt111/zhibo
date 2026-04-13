@@ -1,0 +1,57 @@
+# Prometheus 配置文件
+
+# 全局配置
+global:
+  scrape_interval: 15s  # 抓取间隔
+  evaluation_interval: 15s  # 评估间隔
+
+# 告警配置
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+# 告警规则配置
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+# 抓取配置
+scrape_configs:
+  # 抓取 Prometheus 自身的指标
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # 抓取 Spring Boot 应用的指标
+  - job_name: 'spring-boot'
+    metrics_path: '/api/actuator/prometheus'
+    static_configs:
+      - targets: ['backend:8081']
+        labels:
+          application: 'zhibo-backend'
+
+  # 抓取 Redis 指标
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+
+  # 抓取 MySQL 指标
+  - job_name: 'mysql'
+    static_configs:
+      - targets: ['mysql:3306']
+
+  # 抓取 RabbitMQ 指标
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: ['rabbitmq:15672']
+
+  # 抓取 Elasticsearch 指标
+  - job_name: 'elasticsearch'
+    static_configs:
+      - targets: ['elasticsearch:9200']
+
+  # 抓取 MinIO 指标
+  - job_name: 'minio'
+    static_configs:
+      - targets: ['minio:9000']

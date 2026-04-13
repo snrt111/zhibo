@@ -15,5 +15,6 @@ public class Danmaku {
     private Long userId;
     private String content;
     private String color;
+    private Integer fontSize;
     private LocalDateTime createdAt;
 }

@@ -4,8 +4,10 @@ interface Gift {
   id?: number;
   name: string;
   price: number;
-  image: string;
-  description: string;
+  icon?: string;
+  image?: string;
+  description?: string;
+  isHot?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -31,10 +33,17 @@ interface ApiResponse<T> {
 
 export const giftApi = {
   /**
-   * 获取礼物列表
+   * 获取礼物列表（按价格升序）
    */
   getGiftList: (): Promise<ApiResponse<Gift[]>> => {
     return request.get('/gift/list');
+  },
+
+  /**
+   * 获取热门礼物列表
+   */
+  getHotGiftList: (): Promise<ApiResponse<Gift[]>> => {
+    return request.get('/gift/hot');
   },
 
   /**
@@ -61,5 +70,19 @@ export const giftApi = {
    */
   getGiftStats: (liveId: number): Promise<ApiResponse<any>> => {
     return request.get(`/gift/stats/${liveId}`);
+  },
+
+  /**
+   * 获取直播间礼物统计
+   */
+  getLiveGiftStats: (liveId: number): Promise<ApiResponse<any>> => {
+    return request.get(`/gift/stats/live/${liveId}`);
+  },
+
+  /**
+   * 获取主播礼物统计
+   */
+  getAnchorGiftStats: (): Promise<ApiResponse<any>> => {
+    return request.get('/gift/stats/anchor');
   }
 };

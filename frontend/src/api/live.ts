@@ -23,6 +23,20 @@ interface ApiResponse<T> {
 
 export const liveApi = {
   /**
+   * 获取分类列表
+   */
+  getCategoryList: (): Promise<ApiResponse<any[]>> => {
+    return request.get('/live/category/list');
+  },
+
+  /**
+   * 根据分类获取直播列表
+   */
+  getLiveListByCategory: (categoryId: number): Promise<ApiResponse<Live[]>> => {
+    return request.get(`/live/list-by-category/${categoryId}`);
+  },
+
+  /**
    * 获取直播列表
    */
   getLiveList: (params?: any): Promise<ApiResponse<Live[]>> => {
@@ -118,5 +132,40 @@ export const liveApi = {
    */
   getPlayUrl: (id: number): Promise<ApiResponse<string>> => {
     return request.get(`/live/play-url/${id}`);
+  },
+
+  /**
+   * 增加观看人数
+   */
+  increaseViewCount: (id: number): Promise<ApiResponse<any>> => {
+    return request.post(`/live/increase-view/${id}`);
+  },
+
+  /**
+   * 搜索直播
+   */
+  search: (params: { keyword?: string; status?: number; page?: number; size?: number }): Promise<ApiResponse<any>> => {
+    return request.get('/live/search', { params });
+  },
+
+  /**
+   * 同步直播到搜索引擎
+   */
+  syncToSearch: (id: number): Promise<ApiResponse<any>> => {
+    return request.post(`/live/sync/${id}`);
+  },
+
+  /**
+   * 批量结束直播
+   */
+  batchEnd: (ids: number[]): Promise<ApiResponse<any>> => {
+    return request.post('/live/batch-end', { ids });
+  },
+
+  /**
+   * 批量删除直播
+   */
+  batchDelete: (ids: number[]): Promise<ApiResponse<any>> => {
+    return request.post('/live/batch-delete', { ids });
   }
 };

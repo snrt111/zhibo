@@ -1,73 +1,319 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { analyticsApi } from '../../api/analytics';
+import { handleResponseAsync, errorHandler } from '../../utils/errorHandler';
+import VChart from 'vue-echarts';
+import { use } from 'echarts/core';
+import { CanvasRenderer } from 'echarts/renderers';
+import { LineChart, BarChart, PieChart } from 'echarts/charts';
+import {
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
+  GridComponent,
+} from 'echarts/components';
+
+use([
+  CanvasRenderer,
+  LineChart,
+  BarChart,
+  PieChart,
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
+  GridComponent,
+]);
 
 const router = useRouter();
 const loading = ref(false);
-const liveTrendData = ref<any>(null);
-const userTrendData = ref<any>(null);
-const giftIncomeData = ref<any>(null);
-const hotLivesData = ref<any>(null);
-const hotAnchorsData = ref<any>(null);
+const liveTrendData = ref<any[]>([]);
+const userTrendData = ref<any[]>([]);
+const giftIncomeData = ref<any[]>([]);
+const hotLivesData = ref<any[]>([]);
+const hotAnchorsData = ref<any[]>([]);
+
+const liveTrendOption = computed(() => ({
+  tooltip: {
+    trigger: 'axis',
+    formatter: (params: any) => {
+      const data = params[0];
+      return `${data.name}<br/>直播数量: ${data.value}`;
+    },
+  },
+  grid: {
+    left: '3%',
+    right: '4%',
+    bottom: '3%',
+    containLabel: true,
+  },
+  xAxis: {
+    type: 'category',
+    data: liveTrendData.value.map((item) => item.date),
+    axisLabel: {
+      rotate: 45,
+      color: 'rgba(255, 255, 255, 0.85)',
+    },
+    axisLine: {
+      lineStyle: {
+        color: 'rgba(255, 255, 255, 0.2)',
+      },
+    },
+    splitLine: {
+      lineStyle: {
+        color: 'rgba(255, 255, 255, 0.1)',
+      },
+    },
+  },
+  yAxis: {
+    type: 'value',
+    name: '直播数量',
+    nameTextStyle: {
+      color: 'rgba(255, 255, 255, 0.85)',
+    },
+    axisLabel: {
+      color: 'rgba(255, 255, 255, 0.85)',
+    },
+    axisLine: {
+      lineStyle: {
+        color: 'rgba(255, 255, 255, 0.2)',
+      },
+    },
+    splitLine: {
+      lineStyle: {
+        color: 'rgba(255, 255, 255, 0.1)',
+      },
+    },
+  },
+  series: [
+    {
+      name: '直播数量',
+      type: 'line',
+      smooth: true,
+      data: liveTrendData.value.map((item) => item.count),
+      areaStyle: {
+        opacity: 0.3,
+      },
+      lineStyle: {
+        width: 3,
+      },
+      itemStyle: {
+        color: '#5470c6',
+      },
+    },
+  ],
+}));
+
+const userTrendOption = computed(() => ({
+  tooltip: {
+    trigger: 'axis',
+    formatter: (params: any) => {
+      const data = params[0];
+      return `${data.name}<br/>新增用户: ${data.value}`;
+    },
+  },
+  grid: {
+    left: '3%',
+    right: '4%',
+    bottom: '3%',
+    containLabel: true,
+  },
+  xAxis: {
+    type: 'category',
+    data: userTrendData.value.map((item) => item.date),
+    axisLabel: {
+      rotate: 45,
+      color: 'rgba(255, 255, 255, 0.85)',
+    },
+    axisLine: {
+      lineStyle: {
+        color: 'rgba(255, 255, 255, 0.2)',
+      },
+    },
+    splitLine: {
+      lineStyle: {
+        color: 'rgba(255, 255, 255, 0.1)',
+      },
+    },
+  },
+  yAxis: {
+    type: 'value',
+    name: '新增用户',
+    nameTextStyle: {
+      color: 'rgba(255, 255, 255, 0.85)',
+    },
+    axisLabel: {
+      color: 'rgba(255, 255, 255, 0.85)',
+    },
+    axisLine: {
+      lineStyle: {
+        color: 'rgba(255, 255, 255, 0.2)',
+      },
+    },
+    splitLine: {
+      lineStyle: {
+        color: 'rgba(255, 255, 255, 0.1)',
+      },
+    },
+  },
+  series: [
+    {
+      name: '新增用户',
+      type: 'bar',
+      data: userTrendData.value.map((item) => item.count),
+      itemStyle: {
+        color: '#91cc75',
+        borderRadius: [4, 4, 0, 0],
+      },
+    },
+  ],
+}));
+
+const giftIncomeOption = computed(() => ({
+  tooltip: {
+    trigger: 'axis',
+    formatter: (params: any) => {
+      const data = params[0];
+      return `${data.name}<br/>礼物收入: ¥${data.value}`;
+    },
+  },
+  grid: {
+    left: '3%',
+    right: '4%',
+    bottom: '3%',
+    containLabel: true,
+  },
+  xAxis: {
+    type: 'category',
+    data: giftIncomeData.value.map((item) => item.date),
+    axisLabel: {
+      rotate: 45,
+      color: 'rgba(255, 255, 255, 0.85)',
+    },
+    axisLine: {
+      lineStyle: {
+        color: 'rgba(255, 255, 255, 0.2)',
+      },
+    },
+    splitLine: {
+      lineStyle: {
+        color: 'rgba(255, 255, 255, 0.1)',
+      },
+    },
+  },
+  yAxis: {
+    type: 'value',
+    name: '礼物收入(元)',
+    nameTextStyle: {
+      color: 'rgba(255, 255, 255, 0.85)',
+    },
+    axisLabel: {
+      color: 'rgba(255, 255, 255, 0.85)',
+    },
+    axisLine: {
+      lineStyle: {
+        color: 'rgba(255, 255, 255, 0.2)',
+      },
+    },
+    splitLine: {
+      lineStyle: {
+        color: 'rgba(255, 255, 255, 0.1)',
+      },
+    },
+  },
+  series: [
+    {
+      name: '礼物收入',
+      type: 'line',
+      smooth: true,
+      data: giftIncomeData.value.map((item) => item.amount),
+      areaStyle: {
+        opacity: 0.3,
+      },
+      lineStyle: {
+        width: 3,
+      },
+      itemStyle: {
+        color: '#fac858',
+      },
+    },
+  ],
+}));
 
 const getLiveTrend = async () => {
   try {
     const response = await analyticsApi.getLiveTrend();
-    if (response.code === 200) {
-      liveTrendData.value = response.data;
-    }
+    await handleResponseAsync(response, (data) => {
+      if (data) {
+        liveTrendData.value = data;
+      }
+    });
   } catch (error) {
-    console.error('获取直播趋势数据错误:', error);
+    errorHandler.handle(error, false);
   }
 };
 
 const getUserTrend = async () => {
   try {
     const response = await analyticsApi.getUserTrend();
-    if (response.code === 200) {
-      userTrendData.value = response.data;
-    }
+    await handleResponseAsync(response, (data) => {
+      if (data) {
+        userTrendData.value = data;
+      }
+    });
   } catch (error) {
-    console.error('获取用户趋势数据错误:', error);
+    errorHandler.handle(error, false);
   }
 };
 
 const getGiftIncome = async () => {
   try {
     const response = await analyticsApi.getGiftIncome();
-    if (response.code === 200) {
-      giftIncomeData.value = response.data;
-    }
+    await handleResponseAsync(response, (data) => {
+      if (data) {
+        giftIncomeData.value = data;
+      }
+    });
   } catch (error) {
-    console.error('获取礼物收入数据错误:', error);
+    errorHandler.handle(error, false);
   }
 };
 
 const getHotLives = async () => {
   try {
     const response = await analyticsApi.getHotLives();
-    if (response.code === 200) {
-      hotLivesData.value = response.data;
-    }
+    await handleResponseAsync(response, (data) => {
+      if (data) {
+        hotLivesData.value = data;
+      }
+    });
   } catch (error) {
-    console.error('获取热门直播数据错误:', error);
+    errorHandler.handle(error, false);
   }
 };
 
 const getHotAnchors = async () => {
   try {
     const response = await analyticsApi.getHotAnchors();
-    if (response.code === 200) {
-      hotAnchorsData.value = response.data;
-    }
+    await handleResponseAsync(response, (data) => {
+      if (data) {
+        hotAnchorsData.value = data;
+      }
+    });
   } catch (error) {
-    console.error('获取热门主播数据错误:', error);
+    errorHandler.handle(error, false);
   }
 };
 
 const handleNavigate = (path: string) => {
   router.push(path);
+};
+
+const formatNumber = (num: number) => {
+  if (num >= 10000) {
+    return (num / 10000).toFixed(1) + '万';
+  }
+  return num.toString();
 };
 
 onMounted(() => {
@@ -94,6 +340,10 @@ onMounted(() => {
           <span class="sidebar-icon">📈</span>
           <span class="sidebar-text">数据分析</span>
         </li>
+        <li @click="handleNavigate('/admin/monitor')">
+          <span class="sidebar-icon">📊</span>
+          <span class="sidebar-text">系统监控</span>
+        </li>
         <li @click="handleNavigate('/admin/live')">
           <span class="sidebar-icon">🎥</span>
           <span class="sidebar-text">直播管理</span>
@@ -101,6 +351,26 @@ onMounted(() => {
         <li @click="handleNavigate('/admin/user')">
           <span class="sidebar-icon">👥</span>
           <span class="sidebar-text">用户管理</span>
+        </li>
+        <li @click="handleNavigate('/admin/gift')">
+          <span class="sidebar-icon">🎁</span>
+          <span class="sidebar-text">礼物管理</span>
+        </li>
+        <li @click="handleNavigate('/admin/ai-config')">
+          <span class="sidebar-icon">🤖</span>
+          <span class="sidebar-text">AI配置管理</span>
+        </li>
+        <li @click="handleNavigate('/admin/audit')">
+          <span class="sidebar-icon">🔍</span>
+          <span class="sidebar-text">内容审核</span>
+        </li>
+        <li @click="handleNavigate('/admin/report')">
+          <span class="sidebar-icon">⚠️</span>
+          <span class="sidebar-text">举报管理</span>
+        </li>
+        <li @click="handleNavigate('/admin/withdraw')">
+          <span class="sidebar-icon">💰</span>
+          <span class="sidebar-text">提现审核</span>
         </li>
       </ul>
     </div>
@@ -111,17 +381,23 @@ onMounted(() => {
           <h2>数据分析</h2>
           <p class="content-subtitle">实时分析平台运营数据</p>
         </div>
-        
-        <!-- 趋势图表 -->
+
         <div class="trend-charts">
           <div class="trend-chart">
             <div class="chart-header">
               <h3>直播趋势</h3>
               <span class="chart-icon">📈</span>
             </div>
-            <div class="chart-placeholder">
-              <!-- 这里可以使用ECharts等图表库 -->
-              <p>直播趋势图表</p>
+            <div class="chart-container">
+              <v-chart
+                v-if="liveTrendData.length > 0"
+                :option="liveTrendOption"
+                autoresize
+                style="height: 300px; width: 100%"
+              />
+              <div v-else class="empty-chart">
+                <p>暂无直播趋势数据</p>
+              </div>
             </div>
           </div>
           <div class="trend-chart">
@@ -129,9 +405,16 @@ onMounted(() => {
               <h3>用户趋势</h3>
               <span class="chart-icon">👥</span>
             </div>
-            <div class="chart-placeholder">
-              <!-- 这里可以使用ECharts等图表库 -->
-              <p>用户趋势图表</p>
+            <div class="chart-container">
+              <v-chart
+                v-if="userTrendData.length > 0"
+                :option="userTrendOption"
+                autoresize
+                style="height: 300px; width: 100%"
+              />
+              <div v-else class="empty-chart">
+                <p>暂无用户趋势数据</p>
+              </div>
             </div>
           </div>
           <div class="trend-chart full-width">
@@ -139,28 +422,39 @@ onMounted(() => {
               <h3>礼物收入趋势</h3>
               <span class="chart-icon">🎁</span>
             </div>
-            <div class="chart-placeholder">
-              <!-- 这里可以使用ECharts等图表库 -->
-              <p>礼物收入趋势图表</p>
+            <div class="chart-container">
+              <v-chart
+                v-if="giftIncomeData.length > 0"
+                :option="giftIncomeOption"
+                autoresize
+                style="height: 300px; width: 100%"
+              />
+              <div v-else class="empty-chart">
+                <p>暂无礼物收入数据</p>
+              </div>
             </div>
           </div>
         </div>
-        
-        <!-- 热门列表 -->
+
         <div class="hot-lists">
           <div class="hot-list">
             <div class="list-header">
               <h3>热门直播</h3>
             </div>
             <div class="hot-items">
-              <div 
-                v-for="(live, index) in hotLivesData" 
-                :key="index" 
+              <div
+                v-for="(live, index) in hotLivesData"
+                :key="index"
                 class="hot-item"
               >
-                <span class="rank">{{ Number(index) + 1 }}</span>
-                <span class="title">{{ live.title }}</span>
-                <span class="value">{{ live.viewCount }} 观看</span>
+                <span class="rank" :class="{ 'top-three': index < 3 }">
+                  {{ Number(index) + 1 }}
+                </span>
+                <div class="item-content">
+                  <span class="title">{{ live.title }}</span>
+                  <span class="anchor">主播: {{ live.anchorName }}</span>
+                </div>
+                <span class="value">{{ formatNumber(live.viewCount) }} 观看</span>
               </div>
               <div v-if="!hotLivesData || hotLivesData.length === 0" class="empty-list">
                 <p>暂无热门直播数据</p>
@@ -172,14 +466,19 @@ onMounted(() => {
               <h3>热门主播</h3>
             </div>
             <div class="hot-items">
-              <div 
-                v-for="(anchor, index) in hotAnchorsData" 
-                :key="index" 
+              <div
+                v-for="(anchor, index) in hotAnchorsData"
+                :key="index"
                 class="hot-item"
               >
-                <span class="rank">{{ Number(index) + 1 }}</span>
-                <span class="title">{{ anchor.username }}</span>
-                <span class="value">{{ anchor.liveCount }} 直播</span>
+                <span class="rank" :class="{ 'top-three': index < 3 }">
+                  {{ Number(index) + 1 }}
+                </span>
+                <div class="item-content">
+                  <span class="title">{{ anchor.nickname || anchor.username }}</span>
+                  <span class="anchor">{{ anchor.liveCount }} 场直播</span>
+                </div>
+                <span class="value">¥{{ formatNumber(anchor.totalIncome) }}</span>
               </div>
               <div v-if="!hotAnchorsData || hotAnchorsData.length === 0" class="empty-list">
                 <p>暂无热门主播数据</p>
@@ -195,8 +494,8 @@ onMounted(() => {
 <style scoped>
 .admin-dashboard-container {
   display: flex;
-  min-height: 100%;
-  background-color: #f0f2f5;
+  min-height: calc(100vh - 72px);
+  background: linear-gradient(180deg, #0f0f0f 0%, #1a1a1a 100%);
   margin: -32px;
   padding: 0;
   border-radius: 0;
@@ -205,8 +504,8 @@ onMounted(() => {
 
 .admin-sidebar {
   width: 240px;
-  background-color: white;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
+  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
   padding: 0;
   position: fixed;
   left: 0;
@@ -219,14 +518,14 @@ onMounted(() => {
 
 .sidebar-header {
   padding: 24px 20px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .sidebar-header h3 {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: #333;
+  color: #fff;
 }
 
 .admin-sidebar ul {
@@ -240,21 +539,21 @@ onMounted(() => {
   align-items: center;
   padding: 14px 20px;
   cursor: pointer;
-  color: #666;
+  color: rgba(255, 255, 255, 0.85);
   transition: all 0.3s ease;
   border-left: 3px solid transparent;
 }
 
 .admin-sidebar li:hover {
-  color: #1890ff;
-  background-color: #f0f7ff;
-  border-left-color: #1890ff;
+  color: #fff;
+  background: rgba(255, 71, 87, 0.15);
+  border-left-color: #ff4757;
 }
 
 .admin-sidebar li.active {
-  color: #1890ff;
-  background-color: #e6f7ff;
-  border-left-color: #1890ff;
+  color: #fff;
+  background: linear-gradient(90deg, rgba(255, 71, 87, 0.2) 0%, rgba(255, 107, 129, 0.1) 100%);
+  border-left-color: #ff4757;
 }
 
 .sidebar-icon {
@@ -272,54 +571,54 @@ onMounted(() => {
 .admin-content {
   flex: 1;
   margin-left: 240px;
-  padding: 30px;
+  padding: 0;
+  min-height: calc(100vh - 72px);
   overflow-y: auto;
   transition: all 0.3s ease;
 }
 
 .analytics-content {
-  max-width: 1400px;
+  max-width: 1600px;
   margin: 0 auto;
   width: 100%;
+  padding: 32px;
 }
 
 .content-header {
-  margin-bottom: 30px;
-  padding: 0 20px;
+  margin-bottom: 32px;
 }
 
 .content-header h2 {
   margin: 0 0 8px 0;
-  font-size: 32px;
-  color: #333;
+  font-size: 28px;
+  color: #fff;
   font-weight: 600;
 }
 
 .content-subtitle {
   margin: 0;
   font-size: 14px;
-  color: #999;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .trend-charts {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 24px;
-  margin-bottom: 40px;
-  padding: 0 20px;
+  margin-bottom: 32px;
 }
 
 .trend-chart {
-  background-color: white;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
 }
 
 .trend-chart:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .trend-chart.full-width {
@@ -337,22 +636,26 @@ onMounted(() => {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: #fff;
 }
 
 .chart-icon {
   font-size: 20px;
 }
 
-.chart-placeholder {
+.chart-container {
+  height: 300px;
+}
+
+.empty-chart {
   height: 300px;
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #f9f9f9;
+  background: rgba(255, 255, 255, 0.03);
   border-radius: 8px;
-  border: 1px dashed #e8e8e8;
-  color: #999;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.7);
   font-size: 14px;
 }
 
@@ -360,20 +663,19 @@ onMounted(() => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 24px;
-  padding: 0 20px;
 }
 
 .hot-list {
-  background-color: white;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
 }
 
 .hot-list:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .list-header {
@@ -384,7 +686,7 @@ onMounted(() => {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: #fff;
 }
 
 .hot-items {
@@ -397,38 +699,55 @@ onMounted(() => {
   display: flex;
   align-items: center;
   padding: 16px;
-  background-color: #f9f9f9;
+  background: rgba(255, 255, 255, 0.03);
   border-radius: 8px;
   transition: all 0.3s ease;
 }
 
 .hot-item:hover {
-  background-color: #f0f0f0;
+  background: rgba(255, 255, 255, 0.06);
   transform: translateX(4px);
 }
 
 .hot-item .rank {
   width: 30px;
   font-weight: 600;
-  color: #1890ff;
+  color: rgba(255, 255, 255, 0.7);
   font-size: 14px;
+  text-align: center;
+}
+
+.hot-item .rank.top-three {
+  color: #ff6b81;
+  font-size: 16px;
+}
+
+.hot-item .item-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-left: 16px;
+  gap: 4px;
 }
 
 .hot-item .title {
-  flex: 1;
-  margin-left: 16px;
   font-size: 14px;
   font-weight: 500;
-  color: #333;
+  color: #fff;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.hot-item .anchor {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
 .hot-item .value {
-  color: #666;
+  color: #00cec9;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
 }
 
@@ -437,11 +756,11 @@ onMounted(() => {
   justify-content: center;
   align-items: center;
   height: 200px;
-  color: #999;
+  color: rgba(255, 255, 255, 0.7);
   font-size: 14px;
-  background-color: #f9f9f9;
+  background: rgba(255, 255, 255, 0.03);
   border-radius: 8px;
-  border: 1px dashed #e8e8e8;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
 }
 
 .loading {
@@ -450,19 +769,18 @@ onMounted(() => {
   align-items: center;
   height: 600px;
   font-size: 18px;
-  color: #666;
+  color: rgba(255, 255, 255, 0.85);
 }
 
-/* 响应式设计 */
 @media (max-width: 1200px) {
   .trend-charts {
     grid-template-columns: 1fr;
   }
-  
+
   .trend-chart.full-width {
     grid-column: span 1;
   }
-  
+
   .hot-lists {
     grid-template-columns: 1fr;
   }
@@ -472,31 +790,26 @@ onMounted(() => {
   .admin-sidebar {
     width: 200px;
   }
-  
+
   .admin-content {
     margin-left: 200px;
+  }
+
+  .analytics-content {
     padding: 20px;
   }
-  
-  .content-header {
-    padding: 0 16px;
-  }
-  
+
   .content-header h2 {
     font-size: 24px;
   }
-  
-  .trend-charts,
-  .hot-lists {
-    padding: 0 16px;
-  }
-  
+
   .trend-chart,
   .hot-list {
     padding: 20px;
   }
-  
-  .chart-placeholder {
+
+  .chart-container,
+  .empty-chart {
     height: 250px;
   }
 }

@@ -1,14 +1,22 @@
 package com.zhibo.backend.controller;
 
-import com.zhibo.backend.entity.Live;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.zhibo.backend.common.Result;
 import com.zhibo.backend.entity.Category;
-import com.zhibo.backend.service.LiveService;
+import com.zhibo.backend.entity.Live;
+import com.zhibo.backend.entity.User;
+import com.zhibo.backend.exception.BusinessException;
 import com.zhibo.backend.service.CategoryService;
+import com.zhibo.backend.service.LiveSearchService;
+import com.zhibo.backend.service.LiveService;
+import com.zhibo.backend.service.MetricsService;
+import com.zhibo.backend.service.UserService;
 import com.zhibo.backend.utils.JwtUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +25,8 @@ import java.util.Map;
 @RequestMapping("/live")
 public class LiveController {
 
+    private static final Logger logger = LoggerFactory.getLogger(LiveController.class);
+
     @Autowired
     private LiveService liveService;
 
@@ -24,317 +34,239 @@ public class LiveController {
     private CategoryService categoryService;
 
     @Autowired
+    private UserService userService;
+
+    @Autowired
+    private LiveSearchService liveSearchService;
+
+    @Autowired
     private JwtUtil jwtUtil;
 
-    /**
-     * 创建直播
-     */
+    @Autowired
+    private MetricsService metricsService;
+
+    private Map<String, Object> convertLiveToMap(Live live) {
+        User user = userService.getById(live.getUserId());
+        Map<String, Object> liveData = new HashMap<>();
+        liveData.put("id", live.getId());
+        liveData.put("userId", live.getUserId());
+        liveData.put("title", live.getTitle());
+        liveData.put("description", live.getDescription());
+        liveData.put("cover", live.getCover());
+        liveData.put("categoryId", live.getCategoryId());
+        liveData.put("streamKey", live.getStreamKey());
+        liveData.put("status", live.getStatus());
+        liveData.put("viewCount", live.getViewCount());
+        liveData.put("startTime", live.getStartTime());
+        liveData.put("endTime", live.getEndTime());
+        liveData.put("createdAt", live.getCreatedAt());
+        liveData.put("updatedAt", live.getUpdatedAt());
+        if (user != null) {
+            liveData.put("userNickname", user.getNickname());
+            liveData.put("userAvatar", user.getAvatar());
+            liveData.put("userUsername", user.getUsername());
+        } else {
+            liveData.put("userNickname", "用户" + live.getUserId());
+            liveData.put("userAvatar", null);
+            liveData.put("userUsername", "用户" + live.getUserId());
+        }
+        return liveData;
+    }
+
     @PostMapping("/create")
-    public ResponseEntity<?> createLive(@RequestHeader("Authorization") String authorization, @RequestBody Live live) {
-        try {
-            // 解析token获取用户ID
-            String token = authorization.replace("Bearer ", "");
-            Long userId = jwtUtil.getUserIdFromToken(token);
-            live.setUserId(userId);
-            // 创建直播
-            Live createdLive = liveService.createLive(live);
-            Map<String, Object> response = new HashMap<>();
-            response.put("code", 200);
-            response.put("message", "创建直播成功");
-            response.put("data", createdLive);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("code", 400);
-            response.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(response);
-        }
+    public Result<Live> createLive(@RequestHeader("Authorization") String authorization, @RequestBody Live live) {
+        logger.info("收到创建直播请求，authorization: {}, live: {}", authorization != null ? "有token" : "无token", live.getTitle());
+        String token = authorization.replace("Bearer ", "");
+        Long userId = jwtUtil.getUserIdFromToken(token);
+        logger.info("解析token成功，userId: {}", userId);
+        live.setUserId(userId);
+        Live createdLive = liveService.createLive(live);
+        logger.info("创建直播成功，liveId: {}", createdLive.getId());
+        return Result.success("创建直播成功", createdLive);
     }
 
-    /**
-     * 开始直播
-     */
     @PostMapping("/start/{liveId}")
-    public ResponseEntity<?> startLive(@RequestHeader("Authorization") String authorization, @PathVariable Long liveId) {
-        try {
-            // 验证用户权限（确保只有主播本人可以开始直播）
-            String token = authorization.replace("Bearer ", "");
-            Long userId = jwtUtil.getUserIdFromToken(token);
-            Live live = liveService.getById(liveId);
-            if (live == null || !live.getUserId().equals(userId)) {
-                Map<String, Object> response = new HashMap<>();
-                response.put("code", 403);
-                response.put("message", "无权操作此直播");
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
-            }
-            // 开始直播
-            boolean success = liveService.startLive(liveId);
-            Map<String, Object> response = new HashMap<>();
-            response.put("code", 200);
-            response.put("message", "开始直播成功");
-            response.put("data", success);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("code", 400);
-            response.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(response);
+    public Result<Boolean> startLive(@RequestHeader("Authorization") String authorization, @PathVariable Long liveId) {
+        String token = authorization.replace("Bearer ", "");
+        Long userId = jwtUtil.getUserIdFromToken(token);
+        Integer userType = jwtUtil.getUserTypeFromToken(token);
+        Live live = liveService.getById(liveId);
+        if (live == null) {
+            throw new BusinessException(404, "直播不存在");
         }
+        if (userType != 1 && !live.getUserId().equals(userId)) {
+            throw new BusinessException(403, "无权操作此直播");
+        }
+        boolean success = liveService.startLive(liveId);
+        if (success) {
+            // 增加直播流数量
+            metricsService.incrementLiveStreamCount();
+        }
+        return Result.success("开始直播成功", success);
     }
 
-    /**
-     * 结束直播
-     */
     @PostMapping("/end/{liveId}")
-    public ResponseEntity<?> endLive(@RequestHeader("Authorization") String authorization, @PathVariable Long liveId) {
-        try {
-            // 验证用户权限（确保只有主播本人可以结束直播）
-            String token = authorization.replace("Bearer ", "");
-            Long userId = jwtUtil.getUserIdFromToken(token);
-            Live live = liveService.getById(liveId);
-            if (live == null || !live.getUserId().equals(userId)) {
-                Map<String, Object> response = new HashMap<>();
-                response.put("code", 403);
-                response.put("message", "无权操作此直播");
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
-            }
-            // 结束直播
-            boolean success = liveService.endLive(liveId);
-            Map<String, Object> response = new HashMap<>();
-            response.put("code", 200);
-            response.put("message", "结束直播成功");
-            response.put("data", success);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("code", 400);
-            response.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(response);
+    public Result<Boolean> endLive(@RequestHeader("Authorization") String authorization, @PathVariable Long liveId) {
+        String token = authorization.replace("Bearer ", "");
+        Long userId = jwtUtil.getUserIdFromToken(token);
+        Integer userType = jwtUtil.getUserTypeFromToken(token);
+        Live live = liveService.getById(liveId);
+        if (live == null) {
+            throw new BusinessException(404, "直播不存在");
         }
+        if (userType != 1 && !live.getUserId().equals(userId)) {
+            throw new BusinessException(403, "无权操作此直播");
+        }
+        boolean success = liveService.endLive(liveId);
+        if (success) {
+            // 减少直播流数量
+            metricsService.decrementLiveStreamCount();
+        }
+        return Result.success("结束直播成功", success);
     }
 
-    /**
-     * 获取直播列表
-     */
     @GetMapping("/list")
-    public ResponseEntity<?> getLiveList(@RequestParam(required = false) Integer status) {
-        try {
-            List<Live> liveList = liveService.getLiveList(status);
-            Map<String, Object> response = new HashMap<>();
-            response.put("code", 200);
-            response.put("message", "获取直播列表成功");
-            response.put("data", liveList);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("code", 400);
-            response.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(response);
-        }
+    public Result<List<Map<String, Object>>> getLiveList(@RequestParam(required = false) Integer status) {
+        List<Live> liveList = liveService.getLiveList(status);
+        List<Map<String, Object>> result = liveList.stream()
+                .map(this::convertLiveToMap)
+                .collect(java.util.stream.Collectors.toList());
+        return Result.success("获取直播列表成功", result);
     }
 
-    /**
-     * 获取当前用户的直播列表
-     */
+    @GetMapping("/admin/list")
+    public Result<Page<Map<String, Object>>> getAdminLiveList(
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Page<Map<String, Object>> result = liveService.getAdminLiveList(status, categoryId, keyword, page, size);
+        return Result.success("获取直播列表成功", result);
+    }
+
     @GetMapping("/my-list")
-    public ResponseEntity<?> getMyLiveList(@RequestHeader("Authorization") String authorization) {
-        try {
-            String token = authorization.replace("Bearer ", "");
-            Long userId = jwtUtil.getUserIdFromToken(token);
-            List<Live> liveList = liveService.getLiveListByUserId(userId);
-            Map<String, Object> response = new HashMap<>();
-            response.put("code", 200);
-            response.put("message", "获取直播列表成功");
-            response.put("data", liveList);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("code", 400);
-            response.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(response);
-        }
+    public Result<List<Map<String, Object>>> getMyLiveList(@RequestHeader("Authorization") String authorization) {
+        String token = authorization.replace("Bearer ", "");
+        Long userId = jwtUtil.getUserIdFromToken(token);
+        List<Live> liveList = liveService.getLiveListByUserId(userId);
+        List<Map<String, Object>> result = liveList.stream()
+                .map(this::convertLiveToMap)
+                .collect(java.util.stream.Collectors.toList());
+        return Result.success("获取直播列表成功", result);
     }
 
-    /**
-     * 获取分类列表
-     */
     @GetMapping("/category/list")
-    public ResponseEntity<?> getCategoryList() {
-        try {
-            List<Category> categoryList = categoryService.getCategoryList();
-            Map<String, Object> response = new HashMap<>();
-            response.put("code", 200);
-            response.put("message", "获取分类列表成功");
-            response.put("data", categoryList);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("code", 400);
-            response.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(response);
-        }
+    public Result<List<Category>> getCategoryList() {
+        List<Category> categoryList = categoryService.getCategoryList();
+        return Result.success("获取分类列表成功", categoryList);
     }
 
-    /**
-     * 根据分类获取直播列表
-     */
     @GetMapping("/list-by-category/{categoryId}")
-    public ResponseEntity<?> getLiveListByCategory(@PathVariable Long categoryId) {
-        try {
-            List<Live> liveList = liveService.getLiveListByCategoryId(categoryId);
-            Map<String, Object> response = new HashMap<>();
-            response.put("code", 200);
-            response.put("message", "获取直播列表成功");
-            response.put("data", liveList);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("code", 400);
-            response.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(response);
-        }
+    public Result<List<Map<String, Object>>> getLiveListByCategory(@PathVariable Long categoryId) {
+        List<Live> liveList = liveService.getLiveListByCategoryId(categoryId);
+        List<Map<String, Object>> result = liveList.stream()
+                .map(this::convertLiveToMap)
+                .collect(java.util.stream.Collectors.toList());
+        return Result.success("获取直播列表成功", result);
     }
 
-    /**
-     * 增加观看人数
-     */
     @PostMapping("/increase-view/{liveId}")
-    public ResponseEntity<?> increaseViewCount(@PathVariable Long liveId) {
-        try {
-            boolean success = liveService.increaseViewCount(liveId);
-            Map<String, Object> response = new HashMap<>();
-            response.put("code", 200);
-            response.put("message", "增加观看人数成功");
-            response.put("data", success);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("code", 400);
-            response.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(response);
-        }
+    public Result<Boolean> increaseViewCount(@PathVariable Long liveId) {
+        boolean success = liveService.increaseViewCount(liveId);
+        return Result.success("增加观看人数成功", success);
     }
 
-    /**
-     * 删除直播
-     */
     @DeleteMapping("/delete/{liveId}")
-    public ResponseEntity<?> deleteLive(@RequestHeader("Authorization") String authorization, @PathVariable Long liveId) {
-        try {
-            String token = authorization.replace("Bearer ", "");
-            Long userId = jwtUtil.getUserIdFromToken(token);
-            Live live = liveService.getById(liveId);
-            if (live == null || !live.getUserId().equals(userId)) {
-                Map<String, Object> response = new HashMap<>();
-                response.put("code", 403);
-                response.put("message", "无权操作此直播");
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
-            }
-            boolean success = liveService.deleteLive(liveId);
-            Map<String, Object> response = new HashMap<>();
-            response.put("code", 200);
-            response.put("message", "删除直播成功");
-            response.put("data", success);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("code", 400);
-            response.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(response);
+    public Result<Boolean> deleteLive(@RequestHeader("Authorization") String authorization, @PathVariable Long liveId) {
+        String token = authorization.replace("Bearer ", "");
+        Long userId = jwtUtil.getUserIdFromToken(token);
+        Integer userType = jwtUtil.getUserTypeFromToken(token);
+        Live live = liveService.getById(liveId);
+        if (live == null) {
+            throw new BusinessException(404, "直播不存在");
         }
+        if (userType != 1 && !live.getUserId().equals(userId)) {
+            throw new BusinessException(403, "无权操作此直播");
+        }
+        boolean success = liveService.deleteLive(liveId);
+        return Result.success("删除直播成功", success);
     }
 
-    /**
-     * 获取直播详情
-     */
     @GetMapping("/detail/{liveId}")
-    public ResponseEntity<?> getLiveDetail(@PathVariable Long liveId) {
-        try {
-            Live live = liveService.getById(liveId);
-            if (live == null) {
-                Map<String, Object> response = new HashMap<>();
-                response.put("code", 404);
-                response.put("message", "直播间不存在");
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-            }
-            Map<String, Object> response = new HashMap<>();
-            response.put("code", 200);
-            response.put("message", "获取直播详情成功");
-            response.put("data", live);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("code", 400);
-            response.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(response);
+    public Result<Map<String, Object>> getLiveDetail(@PathVariable Long liveId) {
+        Live live = liveService.getById(liveId);
+        if (live == null) {
+            throw new BusinessException(404, "直播间不存在");
         }
+        Map<String, Object> liveData = convertLiveToMap(live);
+        return Result.success("获取直播详情成功", liveData);
     }
 
-    /**
-     * 获取推流地址
-     */
     @GetMapping("/push-url/{liveId}")
-    public ResponseEntity<?> getPushUrl(@RequestHeader("Authorization") String authorization, @PathVariable Long liveId) {
-        try {
-            String token = authorization.replace("Bearer ", "");
-            Long userId = jwtUtil.getUserIdFromToken(token);
-            Live live = liveService.getById(liveId);
-            if (live == null || !live.getUserId().equals(userId)) {
-                Map<String, Object> response = new HashMap<>();
-                response.put("code", 403);
-                response.put("message", "无权获取此直播推流地址");
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
-            }
-            String pushUrl = "rtmp://localhost:1935/live/" + live.getStreamKey();
-            Map<String, Object> response = new HashMap<>();
-            response.put("code", 200);
-            response.put("message", "获取推流地址成功");
-            response.put("data", pushUrl);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("code", 400);
-            response.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(response);
+    public Result<String> getPushUrl(@RequestHeader("Authorization") String authorization, @PathVariable Long liveId) {
+        String token = authorization.replace("Bearer ", "");
+        Long userId = jwtUtil.getUserIdFromToken(token);
+        Live live = liveService.getById(liveId);
+        if (live == null || !live.getUserId().equals(userId)) {
+            throw new BusinessException(403, "无权获取此直播推流地址");
         }
+        String pushUrl = "rtmp://localhost:1935/live/" + live.getStreamKey();
+        return Result.success("获取推流地址成功", pushUrl);
     }
 
-    /**
-     * 获取播放地址
-     */
     @GetMapping("/play-url/{liveId}")
-    public ResponseEntity<?> getPlayUrl(@PathVariable Long liveId) {
-        try {
-            Live live = liveService.getById(liveId);
-            if (live == null) {
-                Map<String, Object> response = new HashMap<>();
-                response.put("code", 404);
-                response.put("message", "直播间不存在");
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-            }
-            String playUrl = "http://localhost:8080/hls/" + live.getStreamKey() + ".m3u8";
-            Map<String, Object> response = new HashMap<>();
-            response.put("code", 200);
-            response.put("message", "获取播放地址成功");
-            response.put("data", playUrl);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("code", 400);
-            response.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(response);
+    public Result<String> getPlayUrl(@PathVariable Long liveId) {
+        Live live = liveService.getById(liveId);
+        if (live == null) {
+            throw new BusinessException(404, "直播间不存在");
         }
+        String playUrl = "/hls/" + live.getStreamKey() + ".m3u8" + "?t=" + System.currentTimeMillis();
+        return Result.success("获取播放地址成功", playUrl);
     }
 
-    /**
-     * 测试端点
-     */
+    @GetMapping("/search")
+    public Result<Map<String, Object>> searchLives(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Map<String, Object> result = liveSearchService.searchLives(keyword, status, page, size);
+        return Result.success("搜索成功", result);
+    }
+
+    @PostMapping("/sync/{liveId}")
+    public Result<Void> syncLiveToSearch(@PathVariable Long liveId) {
+        liveSearchService.syncLiveToElasticsearch(liveId);
+        return Result.success("同步成功", null);
+    }
+
     @GetMapping("/test")
-    public ResponseEntity<?> test() {
-        Map<String, Object> response = new HashMap<>();
-        response.put("code", 200);
-        response.put("message", "测试成功");
-        response.put("data", "Hello, World!");
-        return ResponseEntity.ok(response);
+    public Result<String> test() {
+        return Result.success("测试成功", "Hello, World!");
+    }
+
+    @PostMapping("/batch-end")
+    public Result<Integer> batchEndLive(@RequestBody Map<String, List<Long>> request) {
+        List<Long> ids = request.get("ids");
+        if (ids == null || ids.isEmpty()) {
+            throw new BusinessException(400, "请选择要结束的直播");
+        }
+        int count = liveService.batchEndLive(ids);
+        // 减少直播流数量
+        for (int i = 0; i < count; i++) {
+            metricsService.decrementLiveStreamCount();
+        }
+        return Result.success("批量结束直播成功，共处理 " + count + " 个直播", count);
+    }
+
+    @PostMapping("/batch-delete")
+    public Result<Integer> batchDeleteLive(@RequestBody Map<String, List<Long>> request) {
+        List<Long> ids = request.get("ids");
+        if (ids == null || ids.isEmpty()) {
+            throw new BusinessException(400, "请选择要删除的直播");
+        }
+        int count = liveService.batchDeleteLive(ids);
+        return Result.success("批量删除直播成功，共删除 " + count + " 个直播", count);
     }
 }

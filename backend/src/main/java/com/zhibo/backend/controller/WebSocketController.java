@@ -54,8 +54,10 @@ public class WebSocketController {
         response.put("username", username);
         response.put("content", danmaku.getContent());
         response.put("color", danmaku.getColor());
+        response.put("fontSize", danmaku.getFontSize());
         response.put("timestamp", System.currentTimeMillis());
         
+        System.out.println("广播弹幕到 /topic/live/" + liveId + ", 消息: " + response);
         messagingTemplate.convertAndSend("/topic/live/" + liveId, response);
     }
 
@@ -71,6 +73,16 @@ public class WebSocketController {
         response.put("totalPrice", giftRecord.getTotalAmount());
         response.put("timestamp", System.currentTimeMillis());
         
+        messagingTemplate.convertAndSend("/topic/live/" + liveId, response);
+    }
+
+    public void broadcastComment(Long liveId, Map<String, Object> commentData) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("type", "comment");
+        response.putAll(commentData);
+        response.put("timestamp", System.currentTimeMillis());
+        
+        System.out.println("广播评论到 /topic/live/" + liveId + ", 消息: " + response);
         messagingTemplate.convertAndSend("/topic/live/" + liveId, response);
     }
 

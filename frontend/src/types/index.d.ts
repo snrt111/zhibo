@@ -1,3 +1,9 @@
+declare module '*.vue' {
+  import type { DefineComponent } from 'vue'
+  const component: DefineComponent<{}, {}, any>
+  export default component
+}
+
 declare module 'sockjs-client' {
   class SockJS {
     constructor(url: string, _reserved?: any, options?: any);

@@ -40,17 +40,23 @@ class WebSocketService {
       return '';
     }
 
+    console.log('订阅目的地:', destination);
     const subscription = this.stompClient.subscribe(destination, (message: any) => {
+      console.log('收到 WebSocket 原始消息:', message);
+      console.log('消息 body:', message.body);
       try {
         const body = JSON.parse(message.body);
+        console.log('解析后的消息:', body);
         callback(body);
       } catch (e) {
+        console.error('解析消息失败:', e, '原始 body:', message.body);
         callback(message.body);
       }
     });
 
     const subscriptionId = destination + '_' + Date.now();
     this.subscriptions.set(subscriptionId, subscription);
+    console.log('订阅成功，subscriptionId:', subscriptionId);
     return subscriptionId;
   }
 

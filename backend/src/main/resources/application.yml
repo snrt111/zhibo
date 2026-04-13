@@ -1,70 +1,80 @@
 spring:
   application:
     name: zhibo-backend
+  profiles:
+    active: dev
 
-  datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/zhibo?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
-    username: ${SPRING_DATASOURCE_USERNAME:root}
-    password: ${SPRING_DATASOURCE_PASSWORD:123456}
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    hikari:
-      maximum-pool-size: ${DB_POOL_SIZE:20}
-      minimum-idle: ${DB_POOL_MIN_IDLE:5}
-      connection-timeout: ${DB_POOL_TIMEOUT:30000}
-      idle-timeout: ${DB_POOL_IDLE_TIMEOUT:600000}
-      max-lifetime: ${DB_POOL_MAX_LIFETIME:1800000}
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.autoconfigure.openai.OpenAiAutoConfiguration
+      - org.springframework.ai.autoconfigure.openai.OpenAiChatAutoConfiguration
+      - org.springframework.ai.autoconfigure.openai.OpenAiImageAutoConfiguration
 
-  sql:
-    init:
-      mode: never
-      schema-locations: classpath:sql/init.sql
-      encoding: utf-8
-
-  data:
-    redis:
-      host: ${SPRING_REDIS_HOST:localhost}
-      port: ${SPRING_REDIS_PORT:6379}
-      password: ${SPRING_REDIS_PASSWORD:}
-      database: ${SPRING_REDIS_DATABASE:0}
-      lettuce:
-        pool:
-          max-active: ${REDIS_POOL_MAX_ACTIVE:20}
-          max-idle: ${REDIS_POOL_MAX_IDLE:10}
-          min-idle: ${REDIS_POOL_MIN_IDLE:5}
-
-  rabbitmq:
-    host: ${SPRING_RABBITMQ_HOST:localhost}
-    port: ${SPRING_RABBITMQ_PORT:5672}
-    username: ${SPRING_RABBITMQ_USERNAME:guest}
-    password: ${SPRING_RABBITMQ_PASSWORD:guest}
-    virtual-host: ${SPRING_RABBITMQ_VHOST:/}
-
-  elasticsearch:
-    uris: ${SPRING_ELASTICSEARCH_URIS:http://localhost:9200}
-    username: ${SPRING_ELASTICSEARCH_USERNAME:}
-    password: ${SPRING_ELASTICSEARCH_PASSWORD:}
-    socket-timeout: ${ES_SOCKET_TIMEOUT:30s}
-    connect-timeout: ${ES_CONNECT_TIMEOUT:10s}
-
-  servlet:
-    multipart:
-      max-file-size: ${UPLOAD_MAX_FILE_SIZE:10MB}
-      max-request-size: ${UPLOAD_MAX_REQUEST_SIZE:20MB}
-      enabled: true
-
-mybatis-plus:
-  mapper-locations: classpath*:mapper/**/*.xml
-  type-aliases-package: com.zhibo.backend.entity
-  configuration:
-    map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
-  global-config:
-    db-config:
-      id-type: assign-id
-      logic-delete-field: deleted
-      logic-delete-value: 1
-      logic-not-delete-value: 0
-
+#  datasource:
+#    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/zhibo?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+#    username: ${SPRING_DATASOURCE_USERNAME:root}
+#    password: ${SPRING_DATASOURCE_PASSWORD:123456}
+#    driver-class-name: com.mysql.cj.jdbc.Driver
+#    hikari:
+#      maximum-pool-size: ${DB_POOL_SIZE:20}
+#      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+#      connection-timeout: ${DB_POOL_TIMEOUT:30000}
+#      idle-timeout: ${DB_POOL_IDLE_TIMEOUT:600000}
+#      max-lifetime: ${DB_POOL_MAX_LIFETIME:1800000}
+#
+#  sql:
+#    init:
+#      mode: never
+#      schema-locations: classpath:sql/init.sql
+#      encoding: utf-8
+#
+#  data:
+#    redis:
+#      host: ${SPRING_REDIS_HOST:localhost}
+#      port: ${SPRING_REDIS_PORT:6379}
+#      password: ${SPRING_REDIS_PASSWORD:}
+#      database: ${SPRING_REDIS_DATABASE:0}
+#      timeout: ${SPRING_REDIS_TIMEOUT:3000ms}
+#      connect-timeout: ${SPRING_REDIS_CONNECT_TIMEOUT:2000ms}
+#      lettuce:
+#        pool:
+#          max-active: ${REDIS_POOL_MAX_ACTIVE:20}
+#          max-idle: ${REDIS_POOL_MAX_IDLE:10}
+#          min-idle: ${REDIS_POOL_MIN_IDLE:5}
+#
+#  rabbitmq:
+#    host: ${SPRING_RABBITMQ_HOST:localhost}
+#    port: ${SPRING_RABBITMQ_PORT:5672}
+#    username: ${SPRING_RABBITMQ_USERNAME:guest}
+#    password: ${SPRING_RABBITMQ_PASSWORD:guest}
+#    virtual-host: ${SPRING_RABBITMQ_VHOST:/}
+#
+#  elasticsearch:
+#    uris: ${SPRING_ELASTICSEARCH_URIS:http://localhost:9200}
+#    username: ${SPRING_ELASTICSEARCH_USERNAME:}
+#    password: ${SPRING_ELASTICSEARCH_PASSWORD:}
+#    socket-timeout: ${ES_SOCKET_TIMEOUT:30s}
+#    connect-timeout: ${ES_CONNECT_TIMEOUT:10s}
+#
+#  servlet:
+#    multipart:
+#      max-file-size: ${UPLOAD_MAX_FILE_SIZE:10MB}
+#      max-request-size: ${UPLOAD_MAX_REQUEST_SIZE:20MB}
+#      enabled: true
+#
+#mybatis-plus:
+#  mapper-locations: classpath*:mapper/**/*.xml
+#  type-aliases-package: com.zhibo.backend.entity
+#  configuration:
+#    map-underscore-to-camel-case: true
+#    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+#  global-config:
+#    db-config:
+#      id-type: assign-id
+#      logic-delete-field: deleted
+#      logic-delete-value: 1
+#      logic-not-delete-value: 0
+#
 server:
   port: ${SERVER_PORT:8081}
   servlet:
@@ -77,41 +87,88 @@ server:
       min-spare: ${TOMCAT_MIN_SPARE:10}
     connection-timeout: ${TOMCAT_CONNECTION_TIMEOUT:20s}
     max-http-form-post-size: ${TOMCAT_MAX_POST_SIZE:2MB}
+#
+#jwt:
+#  secret: ${JWT_SECRET:zhibo-secret-key-2026-change-in-production}
+#  expiration: ${JWT_EXPIRATION:86400000}
+#  header: ${JWT_HEADER:Authorization}
+#  prefix: ${JWT_PREFIX:Bearer }
+#
+sms:
+  aliyun:
+    enabled: ${SMS_ALIYUN_ENABLED:false}
+    access-key-id: ${SMS_ALIYUN_ACCESS_KEY_ID:your_access_key_id}
+    access-key-secret: ${SMS_ALIYUN_ACCESS_KEY_SECRET:your_access_key_secret}
+    region-id: ${SMS_ALIYUN_REGION_ID:cn-hangzhou}
+    sign-name: ${SMS_ALIYUN_SIGN_NAME:您的签名}
+    template-code: ${SMS_ALIYUN_TEMPLATE_CODE:SMS_123456789}
 
-jwt:
-  secret: ${JWT_SECRET:zhibo-secret-key-2026-change-in-production}
-  expiration: ${JWT_EXPIRATION:86400000}
-  header: ${JWT_HEADER:Authorization}
-  prefix: ${JWT_PREFIX:Bearer }
+#upload:
+#  path: ${UPLOAD_PATH:/app/uploads}
+#  url-prefix: ${UPLOAD_URL_PREFIX:http://localhost:8081/api/uploads}
+#  use-minio: ${UPLOAD_USE_MINIO:true}
+#
+#minio:
+#  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+#  public-url: ${MINIO_PUBLIC_URL:http://localhost:9000}
+#  accessKey: ${MINIO_ACCESS_KEY:minioadmin}
+#  secretKey: ${MINIO_SECRET_KEY:minioadmin123}
+#  bucketName: ${MINIO_BUCKET_NAME:zhibo-files}
+#
+justauth:
+  enabled: true
+  type:
+    GITHUB:
+      client-id: ${JUSTAUTH_GITHUB_CLIENT_ID:your_github_client_id}
+      client-secret: ${JUSTAUTH_GITHUB_CLIENT_SECRET:your_github_client_secret}
+      redirect-uri: ${JUSTAUTH_GITHUB_REDIRECT_URI:http://localhost:8081/api/user/oauth/callback/github}
+    WECHAT_OPEN:
+      client-id: ${JUSTAUTH_WECHAT_OPEN_CLIENT_ID:your_wechat_open_client_id}
+      client-secret: ${JUSTAUTH_WECHAT_OPEN_CLIENT_SECRET:your_wechat_open_client_secret}
+      redirect-uri: ${JUSTAUTH_WECHAT_OPEN_REDIRECT_URI:http://localhost:8081/api/user/oauth/callback/wechat}
+    QQ:
+      client-id: ${JUSTAUTH_QQ_CLIENT_ID:your_qq_client_id}
+      client-secret: ${JUSTAUTH_QQ_CLIENT_SECRET:your_qq_client_secret}
+      redirect-uri: ${JUSTAUTH_QQ_REDIRECT_URI:http://localhost:8081/api/user/oauth/callback/qq}
+    WEIBO:
+      client-id: ${JUSTAUTH_WEIBO_CLIENT_ID:your_weibo_client_id}
+      client-secret: ${JUSTAUTH_WEIBO_CLIENT_SECRET:your_weibo_client_secret}
+      redirect-uri: ${JUSTAUTH_WEIBO_REDIRECT_URI:http://localhost:8081/api/user/oauth/callback/weibo}
+  cache:
+    type: default
 
-stream:
-  rtmp:
-    server: ${STREAM_RTMP_SERVER:rtmp://localhost:1935/live}
-  hls:
-    server: ${STREAM_HLS_SERVER:http://localhost:8080/hls}
-  ffmpeg:
-    path: ${STREAM_FFMPEG_PATH:ffmpeg}
-  storage:
-    path: ${STREAM_STORAGE_PATH:./stream}
-
-logging:
-  level:
-    root: ${LOG_LEVEL_ROOT:INFO}
-    com.zhibo.backend: ${LOG_LEVEL_ZHIBO:DEBUG}
-    com.zhibo.backend.mapper: ${LOG_LEVEL_MAPPER:DEBUG}
-  pattern:
-    console: ${LOG_PATTERN_CONSOLE:%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n}
-    file: ${LOG_PATTERN_FILE:%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n}
-  file:
-    name: ${LOG_FILE_PATH:logs/zhibo.log}
-    max-size: ${LOG_FILE_MAX_SIZE:10MB}
-    max-history: ${LOG_FILE_MAX_HISTORY:30}
+#stream:
+#  rtmp:
+#    server: ${STREAM_RTMP_SERVER:rtmp://localhost:1935/live}
+#  hls:
+#    server: ${STREAM_HLS_SERVER:http://localhost:8080/hls}
+#  ffmpeg:
+#    path: ${STREAM_FFMPEG_PATH:ffmpeg}
+#  storage:
+#    path: ${STREAM_STORAGE_PATH:./stream}
+#
+#logging:
+#  level:
+#    root: ${LOG_LEVEL_ROOT:INFO}
+#    com.zhibo.backend: ${LOG_LEVEL_ZHIBO:DEBUG}
+#    com.zhibo.backend.mapper: ${LOG_LEVEL_MAPPER:DEBUG}
+#  pattern:
+#    console: ${LOG_PATTERN_CONSOLE:%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n}
+#    file: ${LOG_PATTERN_FILE:%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n}
+#  file:
+#    name: ${LOG_FILE_PATH:logs/zhibo.log}
+#    max-size: ${LOG_FILE_MAX_SIZE:10MB}
+#    max-history: ${LOG_FILE_MAX_HISTORY:30}
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,env,beans,configprops,httptrace,threaddump,heapdump,scheduledtasks,mappings,prometheus
   endpoint:
     health:
       show-details: always
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
